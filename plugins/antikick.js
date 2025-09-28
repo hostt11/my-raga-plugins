@@ -6,7 +6,7 @@ let antiCodes = {};
 
 /*
  * Plugin: Anti Country Code
- * Command: .anti <code>
+ * Command: .anti <code> | .anti off <code> | .anti list | .anti clear
  * Example: .anti 92
  * Owner and sudo only
  */
@@ -21,21 +21,47 @@ Module({
             return await message.sendReply('_This command must be used in a group!_');
         }
 
-        const code = match[1].trim();
-        if (!code) {
-            return await message.sendReply('_Provide a country code! Example: .anti 92_');
-        }
-
+        const input = match[1].trim();
         const jid = message.jid;
-
-        // Normalize code (remove + if exists)
-        const normalizedCode = code.startsWith('+') ? code.slice(1) : code;
 
         if (!antiCodes[jid]) {
             antiCodes[jid] = [];
         }
 
-        // Add code to the group's anti list
+        // LIST all codes
+        if (input.toLowerCase() === 'list') {
+            if (antiCodes[jid].length === 0) {
+                return await message.sendReply('_No anti codes set for this group._');
+            }
+            return await message.sendReply(
+                `_Anti codes active in this group:_\n+${antiCodes[jid].join(', +')}`
+            );
+        }
+
+        // CLEAR all codes
+        if (input.toLowerCase() === 'clear') {
+            antiCodes[jid] = [];
+            return await message.sendReply('_All anti codes cleared for this group._');
+        }
+
+        // Disable a code
+        if (input.toLowerCase().startsWith('off')) {
+            const code = input.replace('off', '').trim();
+            if (!code) {
+                return await message.sendReply('_Provide a code to disable. Example: .anti off 92_');
+            }
+            const normalizedCode = code.startsWith('+') ? code.slice(1) : code;
+            antiCodes[jid] = antiCodes[jid].filter(c => c !== normalizedCode);
+            return await message.sendReply(`_Anti code +${normalizedCode} has been disabled._`);
+        }
+
+        // Enable a code
+        if (!input) {
+            return await message.sendReply('_Provide a country code! Example: .anti 92_');
+        }
+
+        const normalizedCode = input.startsWith('+') ? input.slice(1) : input;
+
         if (!antiCodes[jid].includes(normalizedCode)) {
             antiCodes[jid].push(normalizedCode);
         }
@@ -45,7 +71,7 @@ Module({
         );
     } catch (error) {
         console.error(error);
-        await message.sendReply('_Error: could not set anti code!_');
+        await message.sendReply('_Error: could not process anti command!_');
     }
 });
 
